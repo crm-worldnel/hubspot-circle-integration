@@ -1,0 +1,15 @@
+node_modules/
+.env
+logs/
+.DS_Store
+*.log
+
+# Temp analysis files
+_parse_spec.js
+_spec.yaml
+
+# Editor / OS
+.vscode/
+Thumbs.db
+*.swp
+*.swo
