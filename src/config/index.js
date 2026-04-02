@@ -44,6 +44,10 @@ const config = {
     maxAttempts: parseInt(process.env.MAX_RETRY_ATTEMPTS, 10) || 3,
     intervalMinutes: parseInt(process.env.RETRY_INTERVAL_MINUTES, 10) || 30,
   },
+
+  engagement: {
+    cronSchedule: process.env.ENGAGEMENT_CRON_SCHEDULE || '0 */8 * * *',
+  },
 };
 
 module.exports = config;

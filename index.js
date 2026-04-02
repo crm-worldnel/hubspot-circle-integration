@@ -3,6 +3,7 @@ const app = require('./src/app');
 const logger = require('./src/utils/logger');
 const cron = require('node-cron');
 const { processRetryQueue } = require('./src/services/retryProcessor');
+const engagementService = require('./src/services/engagement.service');
 
 // --- Start server ---
 const server = app.listen(config.port, () => {
@@ -30,17 +31,19 @@ cron.schedule(`*/${retryInterval} * * * *`, async () => {
 
 logger.info('Retry queue cron enabled', { intervalMinutes: retryInterval });
 
-// Engagement sync — disabled until P2
-// const engagementService = require('./src/services/engagement.service');
-// cron.schedule('0 */8 * * *', async () => {
-//   logger.info('Cron: engagement sync started');
-//   try {
-//     const result = await engagementService.syncEngagement();
-//     logger.info('Cron: engagement sync completed', result);
-//   } catch (error) {
-//     logger.error('Cron: engagement sync failed', { errorMessage: error.message });
-//   }
-// });
+// Engagement sync — runs on configurable schedule (default every 8 hours)
+const engagementSchedule = config.engagement.cronSchedule;
+cron.schedule(engagementSchedule, async () => {
+  logger.info('Cron: engagement sync started');
+  try {
+    const result = await engagementService.syncEngagement();
+    logger.info('Cron: engagement sync completed', result);
+  } catch (error) {
+    logger.error('Cron: engagement sync failed', { errorMessage: error.message });
+  }
+});
+
+logger.info('Engagement sync cron enabled', { schedule: engagementSchedule });
 
 // --- Graceful shutdown ---
 process.on('SIGTERM', () => {

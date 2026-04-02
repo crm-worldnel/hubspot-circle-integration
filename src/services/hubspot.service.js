@@ -7,6 +7,8 @@ const CONTACT_PROPERTIES = [
   'firstname', 'lastname', 'email', 'specialty',
   'title', 'city', 'country', 'company', 'jobtitle', 'cleft_ngo_affiliation',
   'circle_sync_status', 'circle_member_id', 'circle_last_synced',
+  'circle_engagement_score', 'circle_post_count', 'circle_comment_count',
+  'circle_rsvp_count', 'circle_last_active',
 ];
 
 const hubspotClient = axios.create({

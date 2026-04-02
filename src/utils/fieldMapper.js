@@ -82,23 +82,36 @@ function mapSyncResultToHubspot({ syncStatus, circleMemberId, error }) {
 
 /**
  * Build HubSpot properties from Circle engagement data.
- * Engagement score = posts×3 + comments×2 + rsvps×1
- * @param {Object} engagement - { postCount, commentCount, rsvpCount, lastActiveAt }
+ * Engagement score = posts×3 + comments×2
+ * @param {Object} engagement - { postCount, commentCount, lastActiveAt }
  * @returns {Object} HubSpot properties object
  */
 function mapEngagementToHubspot(engagement) {
   const score =
     (engagement.postCount || 0) * 3 +
-    (engagement.commentCount || 0) * 2 +
-    (engagement.rsvpCount || 0) * 1;
+    (engagement.commentCount || 0) * 2;
+
+  // HubSpot date properties require midnight UTC timestamps
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  // Convert lastActiveAt to midnight UTC if present
+  let lastActive = '';
+  if (engagement.lastActiveAt) {
+    const d = new Date(engagement.lastActiveAt);
+    if (!isNaN(d.getTime())) {
+      d.setUTCHours(0, 0, 0, 0);
+      lastActive = d.getTime();
+    }
+  }
 
   return {
-    circle_engagement_score: score,
-    circle_post_count: engagement.postCount || 0,
-    circle_comment_count: engagement.commentCount || 0,
-    circle_rsvp_count: engagement.rsvpCount || 0,
-    circle_last_active: engagement.lastActiveAt || '',
-    circle_last_synced: new Date().toISOString(),
+    circle_engagement_score: String(score),
+    circle_post_count: String(engagement.postCount || 0),
+    circle_comment_count: String(engagement.commentCount || 0),
+    circle_rsvp_count: String(0),
+    circle_last_active: lastActive,
+    circle_last_synced: today.getTime(),
   };
 }
 

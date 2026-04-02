@@ -14,23 +14,46 @@ const logger = require('../utils/logger');
  * This is the same logic that runs on the cron schedule.
  * Protected by admin API key.
  */
-router.post('/engagement', adminAuth, async (req, res) => {
+router.post('/engagement', adminAuth, (req, res) => {
   logger.info('Manual engagement sync triggered', { ip: req.ip });
 
+  // Respond immediately — sync runs in background
+  res.status(202).json({
+    message: 'Engagement sync started',
+    note: 'Check GET /api/sync/engagement-status or logs/sync-history.json for results',
+  });
+
+  // Process asynchronously
+  setImmediate(async () => {
+    try {
+      await engagementService.syncEngagement();
+    } catch (error) {
+      logger.error('Background engagement sync failed', {
+        errorMessage: error.message,
+      });
+    }
+  });
+});
+
+/**
+ * GET /api/sync/engagement-status
+ * Check the latest engagement sync result from sync-history.json.
+ */
+router.get('/engagement-status', adminAuth, (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const historyPath = path.join(__dirname, '../../logs/sync-history.json');
+
+  if (!fs.existsSync(historyPath)) {
+    return res.json({ message: 'No sync history yet', lastSync: null });
+  }
+
   try {
-    const result = await engagementService.syncEngagement();
-    res.status(200).json({
-      message: 'Engagement sync completed',
-      ...result,
-    });
+    const history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+    const lastSync = history.length > 0 ? history[history.length - 1] : null;
+    res.json({ totalRuns: history.length, lastSync });
   } catch (error) {
-    logger.error('Manual engagement sync failed', {
-      errorMessage: error.message,
-    });
-    res.status(500).json({
-      error: 'Engagement sync failed',
-      message: error.message,
-    });
+    res.status(500).json({ error: 'Failed to read sync history', message: error.message });
   }
 });
 
