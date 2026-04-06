@@ -26,9 +26,13 @@ function maskEmail(email) {
  * This allows manual Postman testing while keeping webhook auth for production.
  */
 function webhookOrAdmin(req, res, next) {
-  // If admin key is present and valid, skip webhook signature check
+  // If admin key is present in header, use header auth
   if (req.headers['x-admin-key']) {
     return adminAuth(req, res, next);
+  }
+  // If admin key is in request body (HubSpot workflow webhook), validate it
+  if (req.body?.apiKey === config.adminApiKey) {
+    return next();
   }
   // Otherwise require HubSpot webhook signature
   return webhookAuth(req, res, next);
