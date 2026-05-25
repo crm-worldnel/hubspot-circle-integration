@@ -44,13 +44,18 @@ function webhookOrAdmin(req, res, next) {
  * Returns 200 immediately, then processes member creation asynchronously.
  */
 router.post('/create-member', webhookOrAdmin, (req, res) => {
-  // Respond immediately to HubSpot (< 3 seconds)
   res.status(200).json({ received: true });
 
-  // Process asynchronously
   setImmediate(async () => {
     try {
-      // Extract contactId — try objectId first, fallback to contactId key
+      // LOG 1: full incoming payload (mask apiKey)
+      const { apiKey: _omit, ...safeBody } = req.body || {};
+      logger.info('[create-member] STEP 1 — webhook received', {
+        body: safeBody,
+        objectIdRaw: req.body?.objectId ?? 'MISSING',
+        contactIdRaw: req.body?.contactId ?? 'MISSING',
+      });
+
       let contactId = req.body?.objectId;
       let idSource = 'objectId';
 
@@ -60,40 +65,47 @@ router.post('/create-member', webhookOrAdmin, (req, res) => {
       }
 
       if (!contactId) {
-        logger.error('Webhook received but no contactId found in payload', {
-          body: req.body,
+        logger.error('[create-member] STEP 1 FAILED — no contactId in payload, aborting', {
+          body: safeBody,
         });
         return;
       }
 
-      logger.info('Processing create-member webhook', { contactId, idSource });
-
-      // Step 1: Set sync status to PENDING
+      logger.info('[create-member] STEP 2 — setting HubSpot status to pending', { contactId, idSource });
       await hubspotService.updateContact(contactId, { circle_sync_status: 'pending' });
 
-      // Step 2: Fetch full contact from HubSpot
+      logger.info('[create-member] STEP 3 — fetching contact from HubSpot', { contactId });
       const contact = await hubspotService.getContactById(contactId);
 
       if (!contact) {
-        logger.error('Contact not found in HubSpot after webhook', { contactId });
+        logger.error('[create-member] STEP 3 FAILED — contact not found in HubSpot', {
+          contactId,
+          hint: 'objectId may be a deal ID instead of a contact ID',
+        });
         await hubspotService.updateContact(contactId, { circle_sync_status: 'sync_failed' });
         return;
       }
 
-      // Step 3: Map HubSpot properties to Circle payload
+      logger.info('[create-member] STEP 3 OK — contact fetched', {
+        contactId,
+        email: maskEmail(contact.properties?.email),
+        name: `${contact.properties?.firstname || ''} ${contact.properties?.lastname || ''}`.trim(),
+      });
+
       const circlePayload = mapHubSpotToCircle(contact.properties);
-      logger.debug('Mapped Circle payload', {
+      logger.info('[create-member] STEP 4 — mapped Circle payload', {
         contactId,
         email: maskEmail(circlePayload.email),
         name: circlePayload.name,
-        hasCommunityId: !!circlePayload.community_id,
+        skipInvitation: circlePayload.skip_invitation,
+        profileFieldCount: Object.keys(circlePayload.community_member_profile_fields || {}).length,
       });
 
-      // Step 4: Create or get member in Circle (duplicate-safe)
+      logger.info('[create-member] STEP 5 — calling Circle createOrGetMember', { contactId });
       const circleMember = await circleService.createOrGetMember(circlePayload);
 
       if (!circleMember) {
-        logger.error('Circle createOrGetMember returned null — marking RETRY_REQUIRED', { contactId });
+        logger.error('[create-member] STEP 5 FAILED — Circle createOrGetMember returned null', { contactId });
         await hubspotService.updateContact(contactId, {
           circle_sync_status: 'retry_required',
           circle_last_synced: new Date().toISOString(),
@@ -108,22 +120,28 @@ router.post('/create-member', webhookOrAdmin, (req, res) => {
         return;
       }
 
-      // Step 5: Write success back to HubSpot
+      logger.info('[create-member] STEP 5 OK — Circle member resolved', {
+        contactId,
+        circleMemberId: circleMember.id,
+        alreadyExisted: circleMember.alreadyExisted,
+      });
+
       const hubspotUpdate = mapSyncResultToHubspot({
         syncStatus: 'sync_success',
         circleMemberId: circleMember.id,
       });
 
+      logger.info('[create-member] STEP 6 — writing sync_success back to HubSpot', { contactId });
       await hubspotService.updateContact(contactId, hubspotUpdate);
 
-      logger.info('Create-member flow complete', {
+      logger.info('[create-member] COMPLETE ✓', {
         contactId,
         circleMemberId: circleMember.id,
         alreadyExisted: circleMember.alreadyExisted,
         inviteSent: !circleMember.alreadyExisted,
       });
     } catch (error) {
-      logger.error('Create-member async processing failed', {
+      logger.error('[create-member] UNHANDLED ERROR in async processing', {
         errorMessage: error.message,
         stack: error.stack,
       });
