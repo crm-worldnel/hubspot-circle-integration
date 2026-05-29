@@ -47,13 +47,12 @@ function mapHubSpotToCircle(hubspotProperties, propertyOptions = {}) {
     : null;
 
   // Build community_member_profile_fields, stripping null/undefined/empty values
+  // Note: cleft_care_specialty and ngo_affiliations excluded temporarily — Circle choice format TBD
   const rawProfileFields = {
-    cleft_care_specialty: specialtyLabel,
     prefix: props.title,
     city_town_of_professional_practice: props.city,
     organization: props.company,
     Title_or_Position: props.jobtitle,
-    ngo_affiliations: ngoValue && ngoValue.length > 0 ? ngoValue : null,
   };
   const community_member_profile_fields = {};
   for (const [key, value] of Object.entries(rawProfileFields)) {
