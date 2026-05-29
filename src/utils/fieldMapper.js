@@ -30,12 +30,12 @@ function mapHubSpotToCircle(hubspotProperties) {
 
   // Build community_member_profile_fields, stripping null/undefined/empty values
   const rawProfileFields = {
-    specialty: props.specialty,
+    cleft_care_specialty: props.specialty,
     prefix: props.title,
     city_town_of_professional_practice: props.city,
-    country: props.country,
-    name_of_hospital_clinic_organization: props.company,
-    work_title_position: props.jobtitle,
+    location: props.country,
+    organization: props.company,
+    Title_or_Position: props.jobtitle,
     ngo_affiliations: props.cleft_ngo_affiliation,
   };
   const community_member_profile_fields = {};
