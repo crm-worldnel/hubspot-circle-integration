@@ -1,25 +1,29 @@
 const logger = require('./logger');
 
-/**
- * Maps HubSpot contact properties to Circle.so member creation payload.
- *
- * Rules:
- * - Concatenates firstname + lastname for name. Uses whichever is present
- *   if one is missing. Falls back to email prefix if both missing.
- * - Strips null/undefined/empty string values from custom_fields.
- * - Logs a warning if email is missing.
- *
- * @param {Object} hubspotProperties - HubSpot contact properties object
- *   (e.g. { firstname, lastname, email, specialty })
- * @returns {Object} Circle API body for POST /community_members
- */
+// Valid NGO choices as defined in Circle profile fields (id: ngo_affiliations)
+const CIRCLE_NGO_CHOICES = new Set([
+  'Akila Bharatha Mahila Seva Samaja (ABMSS)',
+  'CLEFT Charity UK',
+  'Deutsche Cleft Kinderhilfe (DCKH)',
+  'European Cleft Organization (ECO)',
+  'Global Smile Foundation (GSF)',
+  'Noordhoff Craniofacial Foundation (NCF)',
+  'Operation Smile',
+  'Project Harar, UK',
+  'Smile Train',
+  'Transforming Cleft',
+  'Fundación Gantz',
+  'Other',
+  'None',
+]);
+
 /**
  * @param {Object} hubspotProperties
  * @param {Object} [propertyOptions] - { specialtyOptions: {slug: label}, ngoOptions: {slug: label} }
  */
 function mapHubSpotToCircle(hubspotProperties, propertyOptions = {}) {
   const props = hubspotProperties || {};
-  const { specialtyOptions = {}, ngoOptions = {}, validNgoChoices = [] } = propertyOptions;
+  const { specialtyOptions = {}, ngoOptions = {} } = propertyOptions;
 
   if (!props.email) {
     logger.warn('mapHubSpotToCircle called with missing email', { props });
@@ -43,7 +47,7 @@ function mapHubSpotToCircle(hubspotProperties, propertyOptions = {}) {
     ? ngoRaw.split(';').map((v) => {
         const slug = v.trim();
         return ngoOptions[slug] || slug;
-      }).filter((label) => validNgoChoices.length === 0 || validNgoChoices.includes(label))
+      }).filter((label) => CIRCLE_NGO_CHOICES.has(label))
     : null;
 
   // Build community_member_profile_fields, stripping null/undefined/empty values

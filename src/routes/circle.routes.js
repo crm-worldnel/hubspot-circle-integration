@@ -91,12 +91,11 @@ router.post('/create-member', webhookOrAdmin, (req, res) => {
         name: `${contact.properties?.firstname || ''} ${contact.properties?.lastname || ''}`.trim(),
       });
 
-      const [specialtyOptions, ngoOptions, validNgoChoices] = await Promise.all([
+      const [specialtyOptions, ngoOptions] = await Promise.all([
         hubspotService.getPropertyOptions('cleft_field_specialty'),
         hubspotService.getPropertyOptions('cleft_ngo_affiliation'),
-        circleService.getProfileFieldChoices('ngo_affiliations'),
       ]);
-      const circlePayload = mapHubSpotToCircle(contact.properties, { specialtyOptions, ngoOptions, validNgoChoices });
+      const circlePayload = mapHubSpotToCircle(contact.properties, { specialtyOptions, ngoOptions });
       logger.info('[create-member] STEP 4 — mapped Circle payload', {
         contactId,
         email: maskEmail(circlePayload.email),
