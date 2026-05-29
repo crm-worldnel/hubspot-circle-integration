@@ -102,16 +102,6 @@ router.post('/create-member', webhookOrAdmin, (req, res) => {
         name: circlePayload.name,
         skipInvitation: circlePayload.skip_invitation,
         profileFieldCount: Object.keys(circlePayload.community_member_profile_fields || {}).length,
-        profileFields: circlePayload.community_member_profile_fields || {},
-        rawHubspotProps: {
-          specialty: contact.properties?.specialty,
-          title: contact.properties?.title,
-          city: contact.properties?.city,
-          country: contact.properties?.country,
-          company: contact.properties?.company,
-          jobtitle: contact.properties?.jobtitle,
-          cleft_ngo_affiliation: contact.properties?.cleft_ngo_affiliation,
-        },
       });
 
       logger.info('[create-member] STEP 5 — calling Circle createOrGetMember', { contactId });
