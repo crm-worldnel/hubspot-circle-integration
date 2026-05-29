@@ -28,15 +28,18 @@ function mapHubSpotToCircle(hubspotProperties) {
     name = props.email.split('@')[0];
   }
 
+  // NGO affiliation: HubSpot stores multi-select as semicolon-separated string; Circle expects array
+  const ngoRaw = props.cleft_ngo_affiliation;
+  const ngoValue = ngoRaw ? ngoRaw.split(';').map((v) => v.trim()).filter(Boolean) : null;
+
   // Build community_member_profile_fields, stripping null/undefined/empty values
   const rawProfileFields = {
-    cleft_care_specialty: props.specialty,
+    cleft_care_specialty: props.cleft_field_specialty || props.specialty,
     prefix: props.title,
     city_town_of_professional_practice: props.city,
-    location: props.country,
     organization: props.company,
     Title_or_Position: props.jobtitle,
-    ngo_affiliations: props.cleft_ngo_affiliation,
+    ngo_affiliations: ngoValue && ngoValue.length > 0 ? ngoValue : null,
   };
   const community_member_profile_fields = {};
   for (const [key, value] of Object.entries(rawProfileFields)) {

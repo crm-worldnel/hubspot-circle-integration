@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 
 const HUBSPOT_BASE_URL = 'https://api.hubapi.com';
 const CONTACT_PROPERTIES = [
-  'firstname', 'lastname', 'email', 'specialty',
+  'firstname', 'lastname', 'email', 'specialty', 'cleft_field_specialty',
   'title', 'city', 'country', 'company', 'jobtitle', 'cleft_ngo_affiliation',
   'circle_sync_status', 'circle_member_id', 'circle_last_synced',
   'circle_engagement_score', 'circle_post_count', 'circle_comment_count',
