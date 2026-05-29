@@ -185,9 +185,30 @@ async function batchUpdateContacts(contacts) {
   }
 }
 
+/**
+ * Fetch the options (value → label map) for a HubSpot contact property.
+ * @param {string} propertyName
+ * @returns {Promise<Object>} e.g. { dental: 'Dental', anesthesia: 'Anesthesia' }
+ */
+async function getPropertyOptions(propertyName) {
+  try {
+    const response = await hubspotClient.get(`/crm/v3/properties/contacts/${propertyName}`);
+    const options = response.data.options || [];
+    return Object.fromEntries(options.map((o) => [o.value, o.label]));
+  } catch (error) {
+    logger.error('HubSpot getPropertyOptions failed', {
+      propertyName,
+      statusCode: error.response?.status,
+      errorMessage: error.message,
+    });
+    return {};
+  }
+}
+
 module.exports = {
   getContactById,
   getContactByEmail,
   updateContact,
   batchUpdateContacts,
+  getPropertyOptions,
 };

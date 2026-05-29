@@ -13,8 +13,13 @@ const logger = require('./logger');
  *   (e.g. { firstname, lastname, email, specialty })
  * @returns {Object} Circle API body for POST /community_members
  */
-function mapHubSpotToCircle(hubspotProperties) {
+/**
+ * @param {Object} hubspotProperties
+ * @param {Object} [propertyOptions] - { specialtyOptions: {slug: label}, ngoOptions: {slug: label} }
+ */
+function mapHubSpotToCircle(hubspotProperties, propertyOptions = {}) {
   const props = hubspotProperties || {};
+  const { specialtyOptions = {}, ngoOptions = {} } = propertyOptions;
 
   if (!props.email) {
     logger.warn('mapHubSpotToCircle called with missing email', { props });
@@ -28,13 +33,22 @@ function mapHubSpotToCircle(hubspotProperties) {
     name = props.email.split('@')[0];
   }
 
-  // NGO affiliation: HubSpot stores multi-select as semicolon-separated string; Circle expects array
+  // Resolve HubSpot slug to Circle display label
+  const specialtySlug = props.cleft_field_specialty || props.specialty;
+  const specialtyLabel = specialtyOptions[specialtySlug] || specialtySlug || null;
+
+  // NGO: semicolon-separated slugs → array of Circle labels
   const ngoRaw = props.cleft_ngo_affiliation;
-  const ngoValue = ngoRaw ? ngoRaw.split(';').map((v) => v.trim()).filter(Boolean) : null;
+  const ngoValue = ngoRaw
+    ? ngoRaw.split(';').map((v) => {
+        const slug = v.trim();
+        return ngoOptions[slug] || slug;
+      }).filter(Boolean)
+    : null;
 
   // Build community_member_profile_fields, stripping null/undefined/empty values
   const rawProfileFields = {
-    cleft_care_specialty: props.cleft_field_specialty || props.specialty,
+    cleft_care_specialty: specialtyLabel,
     prefix: props.title,
     city_town_of_professional_practice: props.city,
     organization: props.company,
