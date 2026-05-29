@@ -1,21 +1,40 @@
 const logger = require('./logger');
 
-// Valid NGO choices as defined in Circle profile fields (id: ngo_affiliations)
-const CIRCLE_NGO_CHOICES = new Set([
-  'Akila Bharatha Mahila Seva Samaja (ABMSS)',
-  'CLEFT Charity UK',
-  'Deutsche Cleft Kinderhilfe (DCKH)',
-  'European Cleft Organization (ECO)',
-  'Global Smile Foundation (GSF)',
-  'Noordhoff Craniofacial Foundation (NCF)',
-  'Operation Smile',
-  'Project Harar, UK',
-  'Smile Train',
-  'Transforming Cleft',
-  'Fundación Gantz',
-  'Other',
-  'None',
-]);
+// Circle choice IDs for cleft_care_specialty (select field)
+const CIRCLE_SPECIALTY_IDS = {
+  'Anesthesia': 37835,
+  'Cleft Charity Leadership': 37836,
+  'Dental': 37837,
+  'ENT/Audiology': 37838,
+  'Management/Coordination': 37839,
+  'Nursing': 37840,
+  'Nutrition': 37841,
+  'Orthodontics': 37842,
+  'Pediatrician': 37843,
+  'Psychology': 37844,
+  'Research': 37845,
+  'Social Work': 37846,
+  'Speech': 37847,
+  'Surgery': 37848,
+  'Other (Please Specify)': 37849,
+};
+
+// Circle choice IDs for ngo_affiliations (checkbox field)
+const CIRCLE_NGO_IDS = {
+  'Akila Bharatha Mahila Seva Samaja (ABMSS)': 37853,
+  'CLEFT Charity UK': 37854,
+  'Deutsche Cleft Kinderhilfe (DCKH)': 37855,
+  'European Cleft Organization (ECO)': 37856,
+  'Global Smile Foundation (GSF)': 37858,
+  'Noordhoff Craniofacial Foundation (NCF)': 37859,
+  'Operation Smile': 37860,
+  'Project Harar, UK': 37861,
+  'Smile Train': 37862,
+  'Transforming Cleft': 37863,
+  'Fundación Gantz': 43071,
+  'Other': 46766,
+  'None': 46767,
+};
 
 /**
  * @param {Object} hubspotProperties
@@ -37,27 +56,29 @@ function mapHubSpotToCircle(hubspotProperties, propertyOptions = {}) {
     name = props.email.split('@')[0];
   }
 
-  // Resolve HubSpot slug to Circle display label
+  // Resolve HubSpot slug → display label → Circle choice ID
   const specialtySlug = props.cleft_field_specialty || props.specialty;
   const specialtyLabel = specialtyOptions[specialtySlug] || specialtySlug || null;
+  const specialtyId = specialtyLabel ? (CIRCLE_SPECIALTY_IDS[specialtyLabel] || null) : null;
 
-  // NGO: semicolon-separated slugs → resolve labels → filter to valid Circle choices only
+  // NGO: semicolon-separated slugs → labels → Circle choice IDs (skip unknowns)
   const ngoRaw = props.cleft_ngo_affiliation;
-  const ngoValue = ngoRaw
+  const ngoIds = ngoRaw
     ? ngoRaw.split(';').map((v) => {
         const slug = v.trim();
-        return ngoOptions[slug] || slug;
-      }).filter((label) => CIRCLE_NGO_CHOICES.has(label))
+        const label = ngoOptions[slug] || slug;
+        return CIRCLE_NGO_IDS[label] || null;
+      }).filter(Boolean)
     : null;
 
   // Build community_member_profile_fields, stripping null/undefined/empty values
   const rawProfileFields = {
-    cleft_care_specialty: specialtyLabel,
+    cleft_care_specialty: specialtyId,
     prefix: props.title,
     city_town_of_professional_practice: props.city,
     organization: props.company,
     Title_or_Position: props.jobtitle,
-    ngo_affiliations: ngoValue && ngoValue.length > 0 ? ngoValue : null,
+    ngo_affiliations: ngoIds && ngoIds.length > 0 ? ngoIds : null,
   };
   const community_member_profile_fields = {};
   for (const [key, value] of Object.entries(rawProfileFields)) {
