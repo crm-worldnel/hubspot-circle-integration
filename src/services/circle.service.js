@@ -215,10 +215,32 @@ async function getAllMembers() {
   return members;
 }
 
+/**
+ * Fetch valid choice values for a Circle profile field by key.
+ * @param {string} fieldKey - e.g. 'ngo_affiliations'
+ * @returns {Promise<string[]>} Array of valid choice value strings
+ */
+async function getProfileFieldChoices(fieldKey) {
+  try {
+    const response = await circleClient.get('/community_members/profile_fields');
+    const fields = response.data || [];
+    const field = fields.find((f) => f.key === fieldKey);
+    return (field?.choices || []).map((c) => c.value);
+  } catch (error) {
+    logger.error('Circle getProfileFieldChoices failed', {
+      fieldKey,
+      statusCode: error.response?.status,
+      errorMessage: error.message,
+    });
+    return [];
+  }
+}
+
 module.exports = {
   getMemberByEmail,
   createMember,
   createOrGetMember,
   getMemberById,
   getAllMembers,
+  getProfileFieldChoices,
 };

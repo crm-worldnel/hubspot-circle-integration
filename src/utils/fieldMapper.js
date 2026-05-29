@@ -19,7 +19,7 @@ const logger = require('./logger');
  */
 function mapHubSpotToCircle(hubspotProperties, propertyOptions = {}) {
   const props = hubspotProperties || {};
-  const { specialtyOptions = {}, ngoOptions = {} } = propertyOptions;
+  const { specialtyOptions = {}, ngoOptions = {}, validNgoChoices = [] } = propertyOptions;
 
   if (!props.email) {
     logger.warn('mapHubSpotToCircle called with missing email', { props });
@@ -37,22 +37,23 @@ function mapHubSpotToCircle(hubspotProperties, propertyOptions = {}) {
   const specialtySlug = props.cleft_field_specialty || props.specialty;
   const specialtyLabel = specialtyOptions[specialtySlug] || specialtySlug || null;
 
-  // NGO: semicolon-separated slugs → array of Circle labels
+  // NGO: semicolon-separated slugs → resolve labels → filter to valid Circle choices only
   const ngoRaw = props.cleft_ngo_affiliation;
   const ngoValue = ngoRaw
     ? ngoRaw.split(';').map((v) => {
         const slug = v.trim();
         return ngoOptions[slug] || slug;
-      }).filter(Boolean)
+      }).filter((label) => validNgoChoices.length === 0 || validNgoChoices.includes(label))
     : null;
 
   // Build community_member_profile_fields, stripping null/undefined/empty values
-  // Note: cleft_care_specialty and ngo_affiliations excluded temporarily — Circle choice format TBD
   const rawProfileFields = {
+    cleft_care_specialty: specialtyLabel,
     prefix: props.title,
     city_town_of_professional_practice: props.city,
     organization: props.company,
     Title_or_Position: props.jobtitle,
+    ngo_affiliations: ngoValue && ngoValue.length > 0 ? ngoValue : null,
   };
   const community_member_profile_fields = {};
   for (const [key, value] of Object.entries(rawProfileFields)) {

@@ -91,11 +91,12 @@ router.post('/create-member', webhookOrAdmin, (req, res) => {
         name: `${contact.properties?.firstname || ''} ${contact.properties?.lastname || ''}`.trim(),
       });
 
-      const [specialtyOptions, ngoOptions] = await Promise.all([
+      const [specialtyOptions, ngoOptions, validNgoChoices] = await Promise.all([
         hubspotService.getPropertyOptions('cleft_field_specialty'),
         hubspotService.getPropertyOptions('cleft_ngo_affiliation'),
+        circleService.getProfileFieldChoices('ngo_affiliations'),
       ]);
-      const circlePayload = mapHubSpotToCircle(contact.properties, { specialtyOptions, ngoOptions });
+      const circlePayload = mapHubSpotToCircle(contact.properties, { specialtyOptions, ngoOptions, validNgoChoices });
       logger.info('[create-member] STEP 4 — mapped Circle payload', {
         contactId,
         email: maskEmail(circlePayload.email),
@@ -181,11 +182,12 @@ router.post('/retry/:contactId', adminAuth, async (req, res) => {
   logger.info('Manual retry requested', { contactId, currentSyncStatus: currentStatus });
 
   // Map and queue for retry
-  const [specialtyOptions, ngoOptions] = await Promise.all([
+  const [specialtyOptions, ngoOptions, validNgoChoices] = await Promise.all([
     hubspotService.getPropertyOptions('cleft_field_specialty'),
     hubspotService.getPropertyOptions('cleft_ngo_affiliation'),
+    circleService.getProfileFieldChoices('ngo_affiliations'),
   ]);
-  const circlePayload = mapHubSpotToCircle(contact.properties, { specialtyOptions, ngoOptions });
+  const circlePayload = mapHubSpotToCircle(contact.properties, { specialtyOptions, ngoOptions, validNgoChoices });
   const jobId = retryQueue.add({
     contactId,
     email: circlePayload.email,
