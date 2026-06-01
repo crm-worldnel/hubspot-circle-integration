@@ -21,6 +21,7 @@ const CIRCLE_SPECIALTY_IDS = {
 
 // Circle choice IDs for ngo_affiliations (checkbox field)
 const CIRCLE_NGO_IDS = {
+  'American Cleft Palate Craniofacial Association (ACPA)': 155573,
   'Akila Bharatha Mahila Seva Samaja (ABMSS)': 37853,
   'CLEFT Charity UK': 37854,
   'Deutsche Cleft Kinderhilfe (DCKH)': 37855,
